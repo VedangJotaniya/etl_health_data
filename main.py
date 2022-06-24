@@ -2,6 +2,9 @@
 import pandas as pd
 import numpy as np
 import os
+import threading
+import concurrent.futures
+
 pd.set_option('display.max_colwidth', None)
 pd.options.mode.chained_assignment = None  # default='warn'
 
@@ -16,13 +19,10 @@ def extract(src_df, start_index, end_index, selected_cols):
     if start_index > end_index:
         raise Exception("Index range is not proper")
 
-    # print("Extracting rows= ",start_index," : ", end_index, "Total= ", end_index - start_index)
     # extract data rows in a row object
     data_rows = src_df.iloc[start_index:end_index, selected_cols]
-    # print("data_rows in extract")
-    # print(data_rows.head())
-    # print("----"*20)
-    return transform(data_rows)
+
+    return data_rows
 
 
 def transform(rows):
@@ -46,17 +46,12 @@ def transform(rows):
     rows['patient_state'].fillna('prediabeties', inplace=True)
     rows['patient_state']= rows['patient_state'].astype('string')
 
-    print(rows)
-    # print("----" * 20)
-
-
-    return load(rows)
+    return rows
 
 
 def load(rows):
     try:
-        output_path = 'dest.csv'
-        rows.to_csv('dest.csv',index=False, mode='a', header=not os.path.exists(output_path))
+        rows.to_csv('dest.csv',index=False, mode='a', header=False)
     except Exception as e:
         print(type(e))
         print(e.args)
@@ -65,24 +60,51 @@ def load(rows):
 
     return True
 
+def etl(src_df, start, end):
+    print(src_df, start, end)
+    selected_cols = [0, 5, 6, 7, 8, 9]
+    try:
+        rows = extract(src_df=src_df, start_index=start, end_index=end, selected_cols=selected_cols)  # range is inclusive of start and end
+        rows = transform(rows)
+        if load(rows):
+            print("successful in etl for indexes ", start, " : ", end)
+        else:
+            print("Error in etl process")
+            return False
 
+    except Exception as e:
+        print(type(e))
+        print(e.args)
+        print(e)
+        return False
 
-def print_hi(name):
+    return True
+
+def print_hi(name, name2):
     # Use a breakpoint in the code line below to debug your script.
-    print(f'Hi, {name}')  # Press Ctrl+F8 to toggle the breakpoint.
+    print(f'Hi, {name, name2}')  # Press Ctrl+F8 to toggle the breakpoint.
 
 
 # Press the green button in the gutter to run the script.
 if __name__ == '__main__':
-    print_hi('Bombardier Aero')
+    print_hi('Bombardier Aero', "hshs")
 
     # Assuming that source csv file is in current directory
     src_dir = "."
     src_file_name = "patient_data.csv"
-    selected_cols = [0, 5, 6, 7, 8, 9]
+    n_workers = 4
+
     # Create and load source csv into an object and save the object
     print(os.path.join(src_dir, src_file_name))
-    src_df = pd.read_csv(src_file_name,
-                         encoding='ISO-8859-1')  # Assuming a standard encoding of ISO-8859-1 due to presence of UnicodeDecodeError
+    src_df = pd.read_csv(src_file_name, encoding='ISO-8859-1')  # Assuming a standard encoding of ISO-8859-1 due to presence of UnicodeDecodeError
 
-    extract(src_df=src_df, start_index=0, end_index=1000, selected_cols=selected_cols)  # range is inclusive of start and end
+    with open('dest.csv', 'w') as file:
+        file.write('patient_id,glucose_mg/dl_t1,glucose_mg/dl_t,glucose_mg/dl_t3,cancerPresent,atrophy_present,glucose_average,patient_state\n')
+
+    starts = range(0, 1000, 250)
+    ends = range(250, 1001, 250)
+
+    print(*starts)
+    print(*ends)
+    with concurrent.futures.ThreadPoolExecutor(max_workers=n_workers) as executor:
+        executor.map(etl, (src_df, src_df, src_df, src_df), starts, ends)
