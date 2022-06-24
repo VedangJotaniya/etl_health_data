@@ -10,13 +10,14 @@ class TestExtractMethod(unittest.TestCase):
     def test_verify_size(self):
         src_file_name = "patient_data.csv"
         src_df = pd.read_csv(src_file_name, encoding='ISO-8859-1')
-        self.assertEqual(extract(src_df,0,5, [0, 5, 6, 7, 8, 9]).shape, (5, 6))
+        self.assertEqual(extract(src_df, 0, 5, [0, 5, 6, 7, 8, 9]).shape, (5, 6))
+
 
 class TestTransformMethod(unittest.TestCase):
     def test_verify_size(self):
         src_file_name = "patient_data.csv"
         src_df = pd.read_csv(src_file_name, encoding='ISO-8859-1')
-        self.assertEqual(transform(extract(src_df,0,5, [0, 5, 6, 7, 8, 9])).shape, (5, 8))
+        self.assertEqual(transform(extract(src_df, 0, 5, [0, 5, 6, 7, 8, 9])).shape, (5, 8))
 
     def test_no_na_values_present(self):
         src_file_name = "patient_data.csv"
@@ -26,6 +27,12 @@ class TestTransformMethod(unittest.TestCase):
         self.assertEqual(len(df['glucose_mg/dl_t2'].index[df['glucose_mg/dl_t2'].apply(np.isnan)]), 0)
         self.assertEqual(len(df['glucose_mg/dl_t3'].index[df['glucose_mg/dl_t3'].apply(np.isnan)]), 0)
         self.assertEqual(len(df['glucose_average'].index[df['glucose_average'].apply(np.isnan)]), 0)
+
+
+class TestETLMethod(unittest.TestCase):
+    def test_verify_etl_stops_for_invalid_extract(self):
+        src_df = None
+        self.assertEqual(etl(src_df, 0, 200), False)
 
 
 if __name__ == '__main__':
